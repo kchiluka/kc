@@ -1,0 +1,245 @@
+---
+title: "Uber Rides Data Analysis"
+author: "Karthika Chiluka"
+date: "15/06/2022"
+output: 
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(dplyr)
+library(DT)
+library(tidyr)
+library(scales)
+library(rstatix)
+library(kableExtra)
+library(tidyverse)
+library(reshape2)
+library(magrittr)
+library(gridExtra)
+library(zoo)
+library(psych)
+library(grid)
+```
+
+## Summary
+For many individuals, Uber has been a crucial business both for the companies and customers. It is possible for people to request cabs and move from one place to the other at a fee without even having to own a car. Through the utilization of a monitored systems, the operations of Uber business is made effective and convenient. Recently, there has been an increase in the number of uber rides requests and this has called for an effective system that is reliable in provide predictions on the periods, seasons, and times when there is an increased demand of uber rides requests to ensure there are sufficient cabs available at the moment to avoid losses and customer inconveniences. Therefore, this project implements a data analysis approach that provides insights into factors that influence the demand of Uber rides. With the project it is possible to make analysis on when to have a higher or lower number of cabs available and have a proper planning in a functionality that is automated. The project provides analysis on the days of week and weather conditions with higher and lower count of uber trips that customers requested. 
+
+## Introduction
+Uber is a ride-sharing company that offers their customers with services for connecting local drivers and riders for transport services at a fee (Rogers, 2015). Uber services has been expanding and globally has become very popular. They include an app that helps individuals request for rides at any given time from available local Uber drivers. For efficient and reliable services, there needs to have Uber cabs available for any request made by customers. Uber Company has been making efforts to ensure that they satisfy their customers by providing reliable services at all times. However, at times it happens that there are few Uber cabs than the demand at a given season, time of the day, and weather condition and vice versa and this affect the Uber business largely and they have been making losses (Geitung, 2017). 
+With the multivariate data analysis model in this project it is possible to have an analysis of the various factors like day of the week, time of the day, and weather conditions and how they affect the Uber rides. Machine learning methods are also applied in this project to perform data analysis on the Uber rides demands dataset. The data mining and analysis methods involves the utilization of the computational methods that help in determining the essential patterns of a large dataset (Radhika & Masood, 2021). For completion of this project includes literature review, theory, data, methodology, results, implications, and conclusion sections. 
+
+## Literature Review
+
+In a study by Brodeur & Nield (2018), the authors illustrated that there is a significant correlation that exist between whether it rained and the number Uber rides. In their study, the authors were able to identify that when it is raining, the number of Uber rides per hour is approximately 19% higher (Brodeur & Nield, 2018). This illustrated there is a higher demand of Uber rides during the rainy hours as according to the authors. Weather has had a significant effect in the demand of Uber rides. In a study by Cohen et al.  (2016), the authors were able to identify that the day of the week had an effect on the demand of Uber rides. During the weekends, it was identified that the demand for Uber rides was a bit higher compared to weekdays. This might have resulted from the engagement of people in different activities where they have to travel to several places for refreshment and personal reasons. 
+However, little research has been done regarding the main factors affecting the demand for Uber rides for different pickups. There has only been research on factors that affect a surge in prices of Uber rides. Therefore, this project has its focus on the environmental factors such as weather conditions and time and how they affect the demand for Uber rides for different pickups or boroughs for proper planning and management in terms of availability of Uber cabs or taxis. Therefore, in this project there needs to answer the research question of “Which weather conditions mainly affect the demand of Uber rides for different pickups?” Also, the research intends to look into whether temperature and time of the day have any association with the demand of Uber rides.
+
+## Data
+The Uber dataset was downloaded from https://www.kaggle.com/datasets/yannisp/uber-pickups-enriched/download. This dataset involves: 
+
+```{r echo=FALSE}
+uber_nyc_enriched <- read_csv("C:/Users/User/Downloads/archive (6)/uber_nyc_enriched.csv")
+uber<-uber_nyc_enriched
+head(uber)
+
+```
+
+First, the pickup_dt column is converted to the Date type variable. The POSIXct function is used.
+
+```{r}
+uber$pickup_dt <- as.POSIXct(uber$pickup_dt, format="%m/%d/%Y %H:%M:%S")
+uber$Time <- format(as.POSIXct(uber$pickup_dt, format = "%m/%d/%Y %H:%M:%S"), format="%H:%M:%S")
+uber$pickup_dt <- ymd_hms(uber$pickup_dt)
+```
+
+The Date column is split into four columns day,month,year and weekday. This is because they will be essential in analysis for this project.
+```{r}
+# Create individual columns for month day and year
+uber$day <- factor(day(uber$pickup_dt))
+uber$month <- factor(month(uber$pickup_dt, label=TRUE))
+uber$year <- factor(year(uber$pickup_dt))
+uber$dayofweek <- factor(wday(uber$pickup_dt, label=TRUE))
+```
+
+The next step involve creation three new columns for storing Hour, Minute ,and Second of the trip.
+
+```{r}
+# Add Time variables as well 
+uber$second = factor(second(hms(uber$Time)))
+uber$minute = factor(minute(hms(uber$Time)))
+uber$hour = factor(hour(hms(uber$Time)))
+
+```
+
+## Methodology
+Having the data ready for analysis, the next step involved the analysis of data depending on time analysis and weather condition analysis basis. 
+First, an illustration of the distribution of total trips in different hours in a day is done over six months by using group by the Hour column.  
+
+```{r}
+#trips by hours in a day
+data_per_hour <- uber %>% 
+                    group_by(hour) %>% 
+                            dplyr::summarize(Total = n())
+
+```
+
+Then a bar chart showing the distribution of trips in a day is created.
+```{r}
+# Plot the data by hour
+ggplot(data_per_hour, aes(hour, Total)) + 
+geom_bar(stat="identity", 
+         fill="blue", 
+         color="red") + 
+ggtitle("Hourly Trips", subtitle = "aggregated today") + 
+theme(legend.position = "none", 
+      plot.title = element_text(hjust = 0.5), 
+      plot.subtitle = element_text(hjust = 0.5)) + 
+scale_y_continuous(labels=comma)
+
+```
+
+Once the distribution of trips in a day is analysed, the next is the analysis of the distribution of trips in each month. This is is performed using the group by month column. 
+
+```{r}
+#trips by month
+Monthly_Data <- uber %>% group_by(month) %>% dplyr::summarize(Total = n())
+
+Monthly_Data
+
+```
+
+The distribution hs been plotted in a barchart
+
+```{r}
+ggplot(Monthly_Data, aes(month, Total, fill = month)) + 
+geom_bar(stat = "Identity") + 
+ggtitle("Monthly Trips") + 
+theme(legend.position = "none") + 
+scale_y_continuous(labels = comma)
+
+```
+
+The next stage involved the illustration of how weather conditions affect the Uber rides, by concentrating on the pickup areas labelled pickups. 
+```{r}
+histogram <- function(varname, bs = NULL, bw = NULL){
+  h <- ggplot(uber.spread, aes_string(varname)) + geom_histogram(bins = bs, binwidth = bw)
+  return(h)
+}
+uber.spread <- uber %>% spread(borough, pickups, fill = 0)
+d <- melt(uber.spread %>% dplyr::select(spd:sd)) #spd:sd = all the weather variables
+
+ggplot(d, aes(value)) +
+  geom_histogram() +
+  facet_wrap(~variable , scales = 'free')
+```
+
+Next, involved the creation of the borough column as a one variable, named pickups and divide the days of the week as weekdays named wday.
+```{r}
+uber.spread <- uber.spread %>% 
+  mutate(pickups = Bronx +Brooklyn + EWR + Manhattan + Queens + `Staten Island`
+         + !is.na(NA)) %>% 
+  mutate(day = day(pickup_dt)) %>%
+  mutate(hour = hour(pickup_dt)) %>%
+  mutate(week = week(pickup_dt)) %>% 
+  mutate(wday = wday(pickup_dt, label = TRUE)) %>% 
+  mutate(workday = ifelse(wday == 'Sat' | wday == 'Sun' | 
+                            hday == 'Y', 'N', 'Y')) %>% 
+  mutate(yday = yday(pickup_dt))
+
+uber <- uber %>% 
+  mutate(day = day(pickup_dt)) %>%
+  mutate(hour = hour(pickup_dt)) %>%
+  mutate(week = week(pickup_dt)) %>% 
+  mutate(wday = wday(pickup_dt, label = TRUE)) %>% 
+  mutate(workday = ifelse(wday == 'Sat' | wday == 'Sun' | 
+                            hday == 'Y', 'N', 'Y')) %>% 
+  mutate(yday = yday(pickup_dt))
+```
+```{r}
+ggplot(uber.spread, aes(temp, pickups)) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth()
+```
+
+Then next will involve an illustration of the distribution of pickups between the working days and non-working days.
+```{r}
+ggplot(uber.spread, aes(hour, pickups)) +
+  geom_jitter(alpha = 0.3, aes(colour = workday)) +
+  geom_smooth(aes(color = workday))
+```
+
+
+
+The next stage involved showing how Dew point named Dewp correlates with the pickups and how it affects it.
+```{r}
+ggplot(uber.spread, aes(dewp, pickups)) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth()
+```
+
+Next, was to show the distribution between the precipitation named pcp01 and pickups.
+```{r}
+ggplot(uber.spread, aes(pcp01, pickups)) +
+  xlim(0,quantile(uber.spread$pcp01, 0.95)) +
+  geom_jitter(alpha = 0.1) +
+  geom_smooth()
+```
+
+Next involves the illustration of the association between the pickups and wind speed named spd.
+```{r}
+ggplot(uber, aes(spd, pickups)) +
+  geom_jitter(alpha = 0.05) + 
+  geom_smooth() +
+  scale_y_sqrt() +
+  coord_cartesian(ylim = c(0, 2500))
+```
+
+
+## Results
+From the above figures, illustrated the various relationships that exists between the main variables, that is, weather conditions, time of the day, day of the week, and month, and the count of Uber rides and pickups. To perform the comparison between this variables there was creation of different distribution plots. 
+Temperature and rain
+
+
+```{r}
+ggplot(uber.spread, aes(hour, Manhattan)) +
+  geom_jitter(alpha = 0.4, aes(color = temp > 75))
+```
+```{r}
+ggplot(uber.spread, aes(hour, Manhattan)) +
+  geom_jitter( alpha = 0.4, aes(color = pcp01 > 0))
+
+```
+
+From the two graphs, it is clear that neither rain nor temperature have any effect on the Uber rides. However, there is a positive correlation between temperature and demand for Uber rides. It is clear that there are higher temperatures after 1500hrs and this is when there is a higher demand for Uber rides. 
+
+In terms of working and non-working days and the demand for Uber rides the results are illustrated in the box-and-whisker plot. 
+```{r}
+ggplot(uber.spread, aes(workday, pickups)) +
+  geom_boxplot()
+
+```
+
+The box-and-whisker plot illustrates that the Uber rides pattern is changed by the Non-working days through the day but they do not have any significant effect on the total demand of the uber rides in a given day. 
+
+## Implication
+From the results in this project, it would be recommended that further analysis should be conducted through the implementation of advanced machine learning models to provide predictions on the Uber rides dataset.
+
+## Conclusion
+Temperature and time of the day are the main contributing factors to the demand of Uber rides for different pickups. There are more Uber rides request when there are higher temperatures during the day especially at 1500hrs. The project has also identified that non-working days had an effect of a bit higher demand for Uber rides compared to working days. 
+
+# References
+Brodeur, A., & Nield, K. (2018). An empirical analysis of taxi, Lyft and Uber rides: Evidence 	from weather shocks in NYC. Journal of Economic Behavior & Organization, 152, 1-16.
+
+Cohen, P., Hahn, R., Hall, J., Levitt, S., & Metcalfe, R. (2016). Using big data to estimate 	consumer surplus: The case of uber (No. w22627). National Bureau of Economic 	Research.
+
+Geitung, I. (2017). Uber drivers in Cape Town: Working conditions and worker agency in the sharing economy (Master's thesis).
+
+Radhika, A., & Masood, M. S. (2021). Effective dimensionality reduction by using soft computing method in data mining techniques. Soft Computing, 25(6), 4643-4651.
+
+Rogers, B. (2015). The social costs of Uber. U. Chi. L. Rev. Dialogue, 82, 85.
